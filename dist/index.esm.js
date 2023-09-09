@@ -1,11 +1,11 @@
 import { getHashes, createHash, createHmac, timingSafeEqual } from 'crypto';
-import { TextEncoder, TextDecoder } from 'util';
+import 'util';
 
 /**
  * Algorithms for signing and comparing values with signatures
- * 
+ *
  * @todo this needs a factory function
- * 
+ *
  * @module algorithms
  */
 const HASHES = getHashes();
@@ -36,9 +36,9 @@ class SigningAlgorithm {
   }
   /**
    * Verifies the given signature matches the expected signature.
-   * @param {string} key 
-   * @param {string} value 
-   * @param {string} signature 
+   * @param {string} key
+   * @param {string} value
+   * @param {string} signature
    * @return {boolean}
    */
 
@@ -56,7 +56,7 @@ class SigningAlgorithm {
 
 class HashSigningAlgorithm extends SigningAlgorithm {
   /**
-   * 
+   *
    * @param {string} [digestMethod="sha1"]
    * @param {string} [keyDerivation="django-concat"]
    */
@@ -68,7 +68,7 @@ class HashSigningAlgorithm extends SigningAlgorithm {
 
   getSignature(key, value) {
     const keyValue = createKeyDerivation(this.keyDerivation, key, value);
-    return createHash(this.digestMethod).update(keyValue).digest('binary');
+    return createHash(this.digestMethod).update(keyValue).digest();
   }
 
 }
@@ -89,7 +89,7 @@ const HashAlgorithm = (digestMethod, keyDerivation) => new HashSigningAlgorithm(
 
 class HmacSigningAlgorithm extends SigningAlgorithm {
   /**
-   * 
+   *
    * @param {string} [digestMethod="sha1"]
    */
   constructor(digestMethod = 'sha1') {
@@ -98,7 +98,7 @@ class HmacSigningAlgorithm extends SigningAlgorithm {
   }
 
   getSignature(key, value) {
-    return createHmac(this.digestMethod, key).update(value).digest('binary');
+    return createHmac(this.digestMethod, key).update(value).digest();
   }
 
 }
@@ -133,17 +133,6 @@ const btoa = value => (value instanceof Buffer && value || Buffer.from(value.toS
 
 
 const u_btoa = buffer => btoa(new Uint8Array(buffer).reduce((arr, byte) => [...arr, String.fromCharCode(byte)], []).join(''));
-
-const encodeStr = value => new TextEncoder().encode(value);
-
-const decodeStr = value => new TextDecoder().decode(value);
-/** Encodes a string (ascii or utf8) to an ascii base64 string */
-
-
-const base64Encode = value => u_btoa(encodeStr(value));
-/** Decodes an ascii base64 string to a string (ascii or utf8) */
-
-const base64Decode = value => decodeStr(u_atob(value));
 
 const padHex = value => `${value.length % 2 === 1 && '0' || ''}${value}`;
 
@@ -185,20 +174,6 @@ const replaceSymbols = regex => value => value.replace(regex, replaceSymbol);
 
 const makeURLSafe = replaceSymbols(BASE64_TO_URL_SAFE_RE);
 const makeURLUnsafe = replaceSymbols(BASE64_FROM_URL_SAFE_RE);
-/**
- * Encodes a string (ascii or utf8) to a URL-safe ascii base64 string
- * @param {string} value
- * @return {string}
- */
-
-const URLSafeBase64Encode = value => makeURLSafe(base64Encode(value));
-/**
- * Decodes a URL-safe ascii base64 string to a string (ascii or utf8)
- * @param {string} value
- * @return {string}
- */
-
-const URLSafeBase64Decode = value => base64Decode(makeURLUnsafe(value));
 /**
  * Encodes a number to a URL-safe ascii base64 string
  * @param {number} value
@@ -325,7 +300,7 @@ const required = name => {
 
 /**
  * Base Signer class and factory
- * 
+ *
  * @module signer
  */
 /**
@@ -344,7 +319,7 @@ const required = name => {
 
 class BaseSigner {
   /**
-   * 
+   *
    * @param {string} secretKey
    * @param {SigningOptions} options
    */
@@ -385,7 +360,8 @@ class BaseSigner {
   }
 
   getSignature(value) {
-    return URLSafeBase64Encode(this.algorithm.getSignature(this.deriveKey(), value));
+    value = Buffer.from(value);
+    return this.algorithm.getSignature(this.deriveKey(), value).toString('base64');
   }
 
   sign(value) {
@@ -394,14 +370,17 @@ class BaseSigner {
 
   verifySignature(value, signature) {
     try {
-      return this.algorithm.verifySignature(this.deriveKey(), value, URLSafeBase64Decode(signature));
+      value = Buffer.from(value);
+      signature = Buffer.from(signature, 'base64'); // return this.algorithm.verifySignature(this.deriveKey(), value, URLSafeBase64Decode(signature))
+
+      return this.algorithm.verifySignature(this.deriveKey(), value, signature);
     } catch (error) {
       return false;
     }
   }
   /**
    * @todo signedValue.includes _must_ be a string - when base class works with objects, it is not
-   * @param {string} signedValue 
+   * @param {string} signedValue
    */
 
 
@@ -410,9 +389,12 @@ class BaseSigner {
       throw new BadSignature(`No '${this.sep}' found in value`);
     }
 
-    const [value, signature] = rsplit(signedValue, this.sep);
+    let [value, signature] = rsplit(signedValue, this.sep);
 
     if (this.verifySignature(value, signature)) {
+      // if(value.startsWith('.')){
+      //   value = value.slice(1)
+      // }
       return value;
     }
 
@@ -431,7 +413,7 @@ class BaseSigner {
 }
 /**
  * Factory function for creating new instances of `BaseSigner`
- * @param {string} secretKey 
+ * @param {string} secretKey
  * @param {SignerOptions} [options]
  * @return {BaseSigner}
  */
@@ -458,7 +440,7 @@ const Json = {
 
 /**
  * Base Serializer class and factory
- * 
+ *
  * @module serializer
  */
 /**
@@ -511,17 +493,18 @@ class BaseSerializer {
     }
   }
 
-  dumps(value, salt) {
-    return this.makeSigner(salt).sign(this.dumpPayload(value));
+  async dumps(value, salt) {
+    let v = await this.dumpPayload(value);
+    return this.makeSigner(salt).sign(v);
   }
 
-  loads(value, salt) {
-    return this.loadPayload(this.makeSigner(salt).unsign(value));
+  async loads(value, salt) {
+    return await this.loadPayload(this.makeSigner(salt).unsign(value));
   }
 
 }
 /**
- * 
+ *
  * @type {(secretKey: string, options?: SerializerOptions) => BaseSerializer}
  */
 
@@ -673,6 +656,8 @@ const TimedSerializer = function (secretKey, options = {}) {
   return new BaseTimedSerializer(secretKey, options);
 };
 
+const zlib = require('zlib');
+
 const URLSafeSerializerMixin = Base => class extends Base {
   constructor(secretKey = required('secretKey'), {
     salt,
@@ -688,20 +673,44 @@ const URLSafeSerializerMixin = Base => class extends Base {
     });
   }
 
-  dumpPayload(obj) {
-    return URLSafeBase64Encode(super.dumpPayload(obj));
+  async dumpPayload(obj) {
+    return new Promise((resolve, reject) => {
+      let d = Buffer.from(JSON.stringify(obj));
+      zlib.deflate(d, (err, buffer) => {
+        // console.log()
+        if (err) {
+          return reject(err);
+        } // URLSafeBase64Encode(super.dumpPayload(obj))
+
+
+        let v = buffer.toString('base64');
+        resolve('.' + v);
+      });
+    }); // return URLSafeBase64Encode(super.dumpPayload(obj))
   }
 
   loadPayload(payload, serializer) {
-    return super.loadPayload(URLSafeBase64Decode(payload), serializer);
+    // return super.loadPayload(URLSafeBase64Decode(payload), serializer)
+    return new Promise((resolve, reject) => {
+      if (payload.startsWith('.')) {
+        payload = payload.slice(1);
+        let v = Buffer.from(payload, 'base64');
+        return zlib.unzip(v, (err, buffer) => {
+          resolve(buffer.toString());
+        });
+      } else {
+        let v = Buffer.from(payload, 'base64');
+        resolve(v.toString());
+      }
+    });
   }
 
 };
 
 const BaseURLSafeSerializer = URLSafeSerializerMixin(BaseSerializer);
 /**
- * 
- * @param {string} secretKey 
+ *
+ * @param {string} secretKey
  * @param {object} options
  * @param {string} [options.salt='itsdanger.Serializer']
  * @param {function} [options.serializer=Json]
@@ -718,8 +727,8 @@ const URLSafeSerializer = function (secretKey, options = {}) {
 };
 const BaseURLSafeTimedSerializer = URLSafeSerializerMixin(BaseTimedSerializer);
 /**
- * 
- * @param {string} secretKey 
+ *
+ * @param {string} secretKey
  * @param {object} options
  * @param {string} [options.salt='itsdanger.Serializer']
  * @param {function} [options.serializer=Json]

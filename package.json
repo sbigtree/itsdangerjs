@@ -12,6 +12,7 @@
     "lib"
   ],
   "scripts": {
+    "test2": "babel-node test2.js",
     "clean": "rimraf lib dist",
     "build": "run-s clean && run-p build:es build:cjs build:lib:es",
     "build:es": "NODE_ENV=es rollup -c",
@@ -24,10 +25,10 @@
     "type": "git",
     "url": "git+https://github.com/frostiebot/itsdangerjs.git"
   },
-  "dependencies": {},
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.3.4",
+    "@babel/node": "^7.22.15",
     "@babel/plugin-proposal-class-properties": "^7.3.4",
     "@babel/preset-env": "^7.3.4",
     "babel-core": "7.0.0-bridge.0",

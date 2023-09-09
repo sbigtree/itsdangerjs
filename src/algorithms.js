@@ -1,8 +1,8 @@
 /**
  * Algorithms for signing and comparing values with signatures
- * 
+ *
  * @todo this needs a factory function
- * 
+ *
  * @module algorithms
  */
 
@@ -42,9 +42,9 @@ class SigningAlgorithm {
 
   /**
    * Verifies the given signature matches the expected signature.
-   * @param {string} key 
-   * @param {string} value 
-   * @param {string} signature 
+   * @param {string} key
+   * @param {string} value
+   * @param {string} signature
    * @return {boolean}
    */
   verifySignature(key, value, signature) {
@@ -55,10 +55,10 @@ class SigningAlgorithm {
 /**
  * Provides an algorithm using the `crypto.Hash` hashing method for any supported digest.
  * @extends {module:algorithms~SigningAlgorithm}
- */ 
+ */
 class HashSigningAlgorithm extends SigningAlgorithm {
   /**
-   * 
+   *
    * @param {string} [digestMethod="sha1"]
    * @param {string} [keyDerivation="django-concat"]
    */
@@ -70,7 +70,7 @@ class HashSigningAlgorithm extends SigningAlgorithm {
 
   getSignature(key, value) {
     const keyValue = createKeyDerivation(this.keyDerivation, key, value)
-    return createHash(this.digestMethod).update(keyValue).digest('binary')
+    return createHash(this.digestMethod).update(keyValue).digest()
   }
 }
 
@@ -85,10 +85,10 @@ const HashAlgorithm = (digestMethod, keyDerivation) => new HashSigningAlgorithm(
 /**
  * Provides an algorithm using the {@link crypto.Hmac} hashing algorithm for any supported digest
  * @extends {module:algorithms~SigningAlgorithm}
- */ 
+ */
 class HmacSigningAlgorithm extends SigningAlgorithm {
   /**
-   * 
+   *
    * @param {string} [digestMethod="sha1"]
    */
   constructor(digestMethod = 'sha1') {
@@ -97,7 +97,7 @@ class HmacSigningAlgorithm extends SigningAlgorithm {
   }
 
   getSignature(key, value) {
-    return createHmac(this.digestMethod, key).update(value).digest('binary')
+    return createHmac(this.digestMethod, key).update(value).digest()
   }
 }
 
@@ -111,7 +111,7 @@ const HmacAlgorithm = digestMethod => new HmacSigningAlgorithm(digestMethod)
 /**
  * Provides an algorithm that does not perform any signing and returns an empty signature.
  * @extends {module:algorithms~SigningAlgorithm}
- */ 
+ */
 class NoneSigningAlgorithm extends SigningAlgorithm {
   getSignature() {
     return ''

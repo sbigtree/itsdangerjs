@@ -1,14 +1,14 @@
 /**
  * Base Signer class and factory
- * 
+ *
  * @module signer
  */
 
-import { KeyDerivations, HashAlgorithm, HmacAlgorithm } from './algorithms'
+import {KeyDerivations, HashAlgorithm, HmacAlgorithm} from './algorithms'
 
-import { base64AlphabetIncludes, URLSafeBase64Encode, URLSafeBase64Decode } from './encoding'
-import { BadSignature } from './error'
-import { rsplit } from './utils'
+import {base64AlphabetIncludes, URLSafeBase64Encode, URLSafeBase64Decode} from './encoding'
+import {BadSignature} from './error'
+import {rsplit} from './utils'
 
 /**
  * Signer Options
@@ -25,11 +25,17 @@ import { rsplit } from './utils'
  */
 export class BaseSigner {
   /**
-   * 
+   *
    * @param {string} secretKey
    * @param {SigningOptions} options
    */
-  constructor(secretKey, { salt = 'itsdanger.Signer', sep = '.', keyDerivation = KeyDerivations.DJANGO, digestMethod = 'sha1', algorithm } = {}) {
+  constructor(secretKey, {
+    salt = 'itsdanger.Signer',
+    sep = '.',
+    keyDerivation = KeyDerivations.DJANGO,
+    digestMethod = 'sha1',
+    algorithm
+  } = {}) {
     this.secretKey = secretKey
     this.salt = salt
 
@@ -62,7 +68,8 @@ export class BaseSigner {
   }
 
   getSignature(value) {
-    return URLSafeBase64Encode(this.algorithm.getSignature(this.deriveKey(), value))
+    value =  Buffer.from(value)
+    return this.algorithm.getSignature(this.deriveKey(), value).toString('base64')
   }
 
   sign(value) {
@@ -71,7 +78,12 @@ export class BaseSigner {
 
   verifySignature(value, signature) {
     try {
-      return this.algorithm.verifySignature(this.deriveKey(), value, URLSafeBase64Decode(signature))
+      value = Buffer.from(value)
+
+      signature = Buffer.from(signature, 'base64')
+
+      // return this.algorithm.verifySignature(this.deriveKey(), value, URLSafeBase64Decode(signature))
+      return this.algorithm.verifySignature(this.deriveKey(), value, signature)
     } catch (error) {
       return false
     }
@@ -79,16 +91,19 @@ export class BaseSigner {
 
   /**
    * @todo signedValue.includes _must_ be a string - when base class works with objects, it is not
-   * @param {string} signedValue 
+   * @param {string} signedValue
    */
   unsign(signedValue) {
     if (!signedValue.includes(this.sep)) {
       throw new BadSignature(`No '${this.sep}' found in value`)
     }
 
-    const [ value, signature ] = rsplit(signedValue, this.sep)
+    let [value, signature] = rsplit(signedValue, this.sep)
 
     if (this.verifySignature(value, signature)) {
+      // if(value.startsWith('.')){
+      //   value = value.slice(1)
+      // }
       return value
     }
 
@@ -107,7 +122,7 @@ export class BaseSigner {
 
 /**
  * Factory function for creating new instances of `BaseSigner`
- * @param {string} secretKey 
+ * @param {string} secretKey
  * @param {SignerOptions} [options]
  * @return {BaseSigner}
  */

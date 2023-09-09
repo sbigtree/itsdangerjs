@@ -1,6 +1,6 @@
 /**
  * Base Serializer class and factory
- * 
+ *
  * @module serializer
  */
 
@@ -54,17 +54,18 @@ export class BaseSerializer {
     }
   }
 
-  dumps(value, salt) {
-    return this.makeSigner(salt).sign(this.dumpPayload(value))
+  async dumps(value, salt) {
+    let v = await this.dumpPayload(value)
+    return this.makeSigner(salt).sign(v)
   }
 
-  loads(value, salt) {
-    return this.loadPayload(this.makeSigner(salt).unsign(value))
+  async loads(value, salt) {
+    return await this.loadPayload(this.makeSigner(salt).unsign(value))
   }
 }
 
 /**
- * 
+ *
  * @type {(secretKey: string, options?: SerializerOptions) => BaseSerializer}
  */
 export const Serializer = (secretKey, options) => new BaseSerializer(secretKey, options)
