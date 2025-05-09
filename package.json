@@ -9,7 +9,7 @@
     "LICENSE",
     "README.md",
     "dist",
-    "lib"
+    "src"
   ],
   "scripts": {
     "test2": "babel-node test2.js",

@@ -70,6 +70,9 @@ export class BaseSigner {
   getSignature(value) {
     value =  Buffer.from(value)
     return this.algorithm.getSignature(this.deriveKey(), value).toString('base64')
+      .replace(/\+/g, '-')    // + → -
+      .replace(/\//g, '_')    // / → _
+      .replace(/=+$/, '');    // 移除尾部 =
   }
 
   sign(value) {

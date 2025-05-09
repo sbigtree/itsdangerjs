@@ -97,7 +97,8 @@ class HmacSigningAlgorithm extends SigningAlgorithm {
   }
 
   getSignature(key, value) {
-    return createHmac(this.digestMethod, key).update(value).digest()
+    let a = createHmac(this.digestMethod, key).update(value).digest()
+    return a
   }
 }
 

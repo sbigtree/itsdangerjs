@@ -7,6 +7,13 @@ import {required} from './utils'
 
 const zlib = require('zlib')
 
+function toUrlSafeBase64(buffer) {
+  return buffer.toString('base64')
+    .replace(/\+/g, '-')    // + → -
+    .replace(/\//g, '_')    // / → _
+    .replace(/=+$/, '');    // 移除尾部 =
+}
+
 const URLSafeSerializerMixin = Base => class extends Base {
   constructor(secretKey = required('secretKey'), {salt, serializer, signer, signerArgs} = {}) {
     super(secretKey, {salt, serializer, signer, signerArgs})
@@ -22,8 +29,9 @@ const URLSafeSerializerMixin = Base => class extends Base {
         if (err) {
           return reject(err)
         }
-        // URLSafeBase64Encode(super.dumpPayload(obj))
-        let v = buffer.toString('base64')
+
+        // let v = buffer.toString('base64')
+        let v = toUrlSafeBase64(buffer)
         resolve('.' + v)
       })
     })
